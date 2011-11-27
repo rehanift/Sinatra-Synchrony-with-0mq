@@ -62,11 +62,9 @@ module EventMachine
       end
       @halted_fibers = {}
       
-      def initialize(uuid)
+      def initialize(uuid, ctx)
         @uuid = uuid
         self.class.halted_fibers[@uuid] = Fiber.current
-
-        ctx = EM::ZeroMQ::Context.new(1)
 
         @push_socket = ctx.connect(ZMQ::PUSH, "tcp://127.0.0.1:5555")
         @sub_socket = ctx.connect(ZMQ::SUB, 'tcp://127.0.0.1:5556', Handler.new)
@@ -100,11 +98,12 @@ class App < Sinatra::Base
   register Sinatra::Synchrony
   
   puts "Root Fiber: #{Fiber.current.object_id}"
+  ctx = EM::ZeroMQ::Context.new(1)
 
   get '/' do
     puts "Request Fiber: #{Fiber.current.object_id}, Request ID: #{request.object_id.to_s}"
     message = nil
-    client = EventMachine::EngineJS::Client.new(request.object_id.to_s)    
+    client = EventMachine::EngineJS::Client.new(request.object_id.to_s, ctx)    
     client.run("Hello World #{Time.now}") do |eval|
       puts "Done"
       message = eval
